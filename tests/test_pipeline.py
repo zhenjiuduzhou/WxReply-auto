@@ -7,17 +7,30 @@ from unittest.mock import patch
 
 from wxreply.engine import Engine
 from wxreply.models import AppConfig, ChatConfig, Message
+from wxreply.rules import RuleEvaluator
 from wxreply.sender import GuardedSender, SendCancelled
 from wxreply.source import DatabaseMessageSource
 from wxreply.store import Store
 
 
-CHAT = ChatConfig("wxid_test", "测试联系人", "private", True, ("触发",))
+CHAT = ChatConfig("wxid_test", "测试联系人", "private", True)
 
 
 def msg(seq: int, local_id: int, content: str, self_sent: bool = False) -> Message:
     return Message(CHAT.username, "self" if self_sent else CHAT.username,
                    self_sent, "文本", content, seq, local_id, seq)
+
+
+class RuleTests(unittest.TestCase):
+    def test_enabled_contact_needs_no_keyword_but_only_incoming_text_qualifies(self):
+        rules = RuleEvaluator()
+        self.assertTrue(rules.eligible(CHAT, msg(1, 1, "你好")))
+        self.assertFalse(rules.eligible(CHAT, msg(2, 2, "你好", self_sent=True)))
+        self.assertFalse(rules.eligible(CHAT, msg(3, 3, "  ")))
+        self.assertFalse(rules.eligible(CHAT, Message(CHAT.username, CHAT.username,
+                                                     False, "图片", "图片", 4, 4, 4)))
+        self.assertFalse(rules.eligible(ChatConfig("wxid_test", "测试联系人", "private", False),
+                                        msg(5, 5, "你好")))
 
 
 class StoreTests(unittest.TestCase):
@@ -146,7 +159,7 @@ class EngineTests(unittest.TestCase):
             config = AppConfig("4.1.13.65", 1, False, "https://example.com/v1",
                                "test-model", "system", (CHAT,))
             engine = Engine(config, Path(directory))
-            event = msg(10, 1, "触发")
+            event = msg(10, 1, "你好")
             engine.store.ingest(CHAT.username, [event])
             engine.source = unittest.mock.Mock()
             engine.source.recent.return_value = [event]

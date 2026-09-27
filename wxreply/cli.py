@@ -76,7 +76,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     # Explicit command only: sends one diagnostic message to the user's own File Transfer Assistant.
-    chat = ChatConfig("filehelper", "文件传输助手", "private", True, ())
+    chat = ChatConfig("filehelper", "文件传输助手", "private", True)
     source.validate_chat(chat)
     before = source.latest(chat.username)
     if before is None:

@@ -1,6 +1,6 @@
 # Windows 微信自动回复
 
-面向个人微信 Windows 客户端的本地程序。第一版只处理配置中启用的**私聊文字消息**：从本地聊天数据库读取新消息，按关键词规则调用兼容 OpenAI Chat Completions 的大模型 API，默认只保存拟回复；开启 `auto_send` 后通过微信页面发送，并从数据库回读确认。
+面向个人微信 Windows 客户端的本地程序。第一版只处理配置中启用的**私聊文字消息**：从本地聊天数据库读取指定联系人的新消息，调用兼容 OpenAI Chat Completions 的大模型 API，默认只保存拟回复；开启 `auto_send` 后通过微信页面发送，并从数据库回读确认。
 
 当前适配目标是微信 **4.1.13.65**。项目使用固定提交的 [wechatauto-replica](https://github.com/fanyuantaier/wechatauto-replica) 读取数据库和激活 UI Automation。微信更新后，版本检查会阻止继续自动发送，需先重新验证。
 
@@ -8,9 +8,9 @@
 
 双击 `dist\WxReply.exe` 打开主窗口。首次启动会在 `%LOCALAPPDATA%\wxreply\config.json` 创建配置；现有工作目录内的 `config.json` 会被复制到这里。桌面版不需要打开 PowerShell，也不需要单独安装 Python。Windows 用户 API 密钥使用 DPAPI 加密保存在 `%LOCALAPPDATA%\wxreply\api-key.dpapi`。
 
-1. 在“监听联系人”页添加测试联系人。可按备注搜索，选中结果后填入触发关键词。
+1. 在“监听联系人”页添加并启用测试联系人。可按备注搜索后选中结果。
 2. 在“模型与发送”页填写兼容 Chat Completions 的 API 地址、模型名称和密钥。点击“测试 API 连接”确认模型能返回文字；测试只发送固定提示词，可能产生少量 API 用量。保持“允许无人值守自动发送”未勾选，点击“保存配置”。
-3. 点击“启动监听”。首次启动会跳过旧消息，让测试联系人新发一条包含关键词的文字消息。
+3. 点击“启动监听”。首次启动会跳过旧消息，让测试联系人新发一条文字消息。
 4. 在“运行与任务”页查看状态，点选任务可以看到收到的消息、拟回复和处理说明。
 5. 确认只生成模式后，点击“停止”，勾选自动发送、保存、重新启动，再用测试联系人验证发送。
 
@@ -47,12 +47,11 @@ python -m venv .venv
   "username": "wxid_example",
   "display_name": "唯一的微信备注名",
   "chat_type": "private",
-  "enabled": true,
-  "keywords": ["测试自动回复"]
+  "enabled": true
 }
 ```
 
-该示例应作为 `chats` 数组中的一个对象。`display_name` 必须能唯一对应目标联系人；重复备注会被拒绝。只有消息包含至少一个 `keywords` 时才生成回复；空数组不会触发回复。群聊字段已保留，但第一版禁止启用群聊自动回复。
+该示例应作为 `chats` 数组中的一个对象。`display_name` 必须能唯一对应目标联系人；重复备注会被拒绝。已启用的指定联系人发来新文字消息时都会生成回复，无需关键词。旧配置里的 `keywords` 字段会被忽略。群聊字段已保留，但第一版禁止启用群聊自动回复。
 
 在启动程序的同一个 PowerShell 会话中设置 API 密钥，并运行：
 

@@ -12,6 +12,4 @@ class RuleEvaluator:
             and not message.is_self
             and message.kind == "文本"
             and bool(message.content.strip())
-            and bool(chat.keywords)
-            and any(word in message.content for word in chat.keywords)
         )

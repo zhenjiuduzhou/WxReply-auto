@@ -30,7 +30,6 @@ class ChatConfig:
     display_name: str
     chat_type: str
     enabled: bool
-    keywords: tuple[str, ...]
 
 
 @dataclass(frozen=True)

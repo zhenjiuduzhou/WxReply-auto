@@ -42,13 +42,12 @@ class ContactDialog(tk.Toplevel):
         self.parent = parent
         self.result: ChatConfig | None = None
         self.title("编辑联系人" if existing else "添加联系人")
-        self.geometry("580x380")
+        self.geometry("580x340")
         self.transient(parent)
         self.grab_set()
         self.columnconfigure(1, weight=1)
         self.username = tk.StringVar(value=existing.username if existing else "")
         self.name = tk.StringVar(value=existing.display_name if existing else "")
-        self.keywords = tk.StringVar(value="，".join(existing.keywords) if existing else "")
         self.enabled = tk.BooleanVar(value=existing.enabled if existing else True)
         self.search_term = tk.StringVar()
         ttk.Label(self, text="搜索微信联系人").grid(row=0, column=0, padx=16, pady=(16, 6), sticky="w")
@@ -65,16 +64,15 @@ class ContactDialog(tk.Toplevel):
         for row, label, variable in (
             (2, "微信内部 ID", self.username),
             (3, "准确备注 / 昵称", self.name),
-            (4, "触发关键词（逗号分隔）", self.keywords),
         ):
             ttk.Label(self, text=label).grid(row=row, column=0, padx=16, pady=8, sticky="w")
             ttk.Entry(self, textvariable=variable).grid(row=row, column=1, columnspan=2,
                                                           padx=(8, 16), pady=8, sticky="ew")
         ttk.Checkbutton(self, text="启用这个联系人", variable=self.enabled).grid(
-            row=5, column=0, columnspan=2, padx=16, sticky="w"
+            row=4, column=0, columnspan=2, padx=16, sticky="w"
         )
         buttons = ttk.Frame(self)
-        buttons.grid(row=6, column=0, columnspan=3, pady=12)
+        buttons.grid(row=5, column=0, columnspan=3, pady=12)
         ttk.Button(buttons, text="保存", command=self._save).pack(side="left", padx=8)
         ttk.Button(buttons, text="取消", command=self.destroy).pack(side="left", padx=8)
 
@@ -105,20 +103,13 @@ class ContactDialog(tk.Toplevel):
     def _save(self) -> None:
         username = self.username.get().strip()
         name = self.name.get().strip()
-        keywords = tuple(dict.fromkeys(
-            word.strip() for word in self.keywords.get().replace("，", ",").split(",")
-            if word.strip()
-        ))
         if not username or not name:
             messagebox.showerror("联系人", "请填写微信内部 ID 和准确备注。", parent=self)
             return
         if username.endswith("@chatroom"):
             messagebox.showerror("联系人", "当前版本只支持私聊。", parent=self)
             return
-        if self.enabled.get() and not keywords:
-            messagebox.showerror("联系人", "启用联系人时，至少填写一个触发关键词。", parent=self)
-            return
-        self.result = ChatConfig(username, name, "private", self.enabled.get(), keywords)
+        self.result = ChatConfig(username, name, "private", self.enabled.get())
         self.destroy()
 
 
@@ -188,7 +179,7 @@ class ReplyApp(tk.Tk):
         self._build_settings(settings)
 
     def _build_dashboard(self, frame: ttk.Frame) -> None:
-        ttk.Label(frame, text="只处理启用的私聊、文字消息和包含关键词的新消息。首次监听会跳过旧消息。")\
+        ttk.Label(frame, text="已启用的私聊联系人发来新文字消息时生成回复。首次监听会跳过旧消息。")\
             .pack(anchor="w", pady=(0, 10))
         columns = ("time", "chat", "state", "received")
         self.tasks = ttk.Treeview(frame, columns=columns, show="headings", height=13)
@@ -205,12 +196,12 @@ class ReplyApp(tk.Tk):
         self.task_rows = []
 
     def _build_contacts(self, frame: ttk.Frame) -> None:
-        ttk.Label(frame, text="添加联系人时可搜索微信备注。一个联系人可以设置多个关键词，用逗号分隔。")\
+        ttk.Label(frame, text="添加并启用指定联系人后，该联系人发来的新文字消息都会触发回复。")\
             .pack(anchor="w", pady=(0, 10))
-        self.contacts = ttk.Treeview(frame, columns=("id", "name", "keywords", "enabled"),
+        self.contacts = ttk.Treeview(frame, columns=("id", "name", "enabled"),
                                      show="headings")
         for key, label, width in (("id", "微信内部 ID", 240), ("name", "备注 / 昵称", 180),
-                                  ("keywords", "触发关键词", 300), ("enabled", "启用", 70)):
+                                  ("enabled", "启用", 70)):
             self.contacts.heading(key, text=label)
             self.contacts.column(key, width=width)
         self.contacts.pack(fill="both", expand=True)
@@ -291,7 +282,7 @@ class ReplyApp(tk.Tk):
         self.contacts.delete(*self.contacts.get_children())
         for index, chat in enumerate(self.chats):
             self.contacts.insert("", "end", iid=str(index), values=(
-                chat.username, chat.display_name, "、".join(chat.keywords),
+                chat.username, chat.display_name,
                 "是" if chat.enabled else "否",
             ))
 
@@ -359,8 +350,8 @@ class ReplyApp(tk.Tk):
                 raise ValueError("请填写微信版本和 API 地址")
             if any(chat.enabled and chat.chat_type != "private" for chat in candidate.chats):
                 raise ValueError("当前版本仅支持私聊")
-            if candidate.auto_send and not any(chat.enabled and chat.keywords for chat in candidate.chats):
-                raise ValueError("自动发送前请启用至少一个设置了关键词的私聊")
+            if candidate.auto_send and not any(chat.enabled for chat in candidate.chats):
+                raise ValueError("自动发送前请启用至少一个私聊联系人")
             self.secret.write(self.key.get().strip())
             save_config(self.config_path, candidate)
             self.config = load_config(self.config_path)

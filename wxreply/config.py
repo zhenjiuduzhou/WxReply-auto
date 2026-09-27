@@ -16,7 +16,6 @@ def load_config(path: Path) -> AppConfig:
             display_name=str(item["display_name"]).strip(),
             chat_type=str(item.get("chat_type", "private")),
             enabled=bool(item.get("enabled", False)),
-            keywords=tuple(str(x).strip() for x in item.get("keywords", []) if str(x).strip()),
         )
         for item in raw.get("chats", [])
     )

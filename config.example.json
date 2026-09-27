@@ -10,8 +10,7 @@
       "username": "在此填写联系人的微信内部ID",
       "display_name": "在此填写微信中的唯一备注名",
       "chat_type": "private",
-      "enabled": false,
-      "keywords": ["测试自动回复"]
+      "enabled": false
     }
   ]
 }
