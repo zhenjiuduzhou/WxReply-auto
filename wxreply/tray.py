@@ -44,9 +44,15 @@ def run_tray(engine: Engine, data_dir) -> None:
 
     def show_recent(icon, item):
         rows = engine.store.recent()
-        lines = [f"{row['chat_id']} · {row['state']} · {row['content'][:28]}"
-                 for row in rows]
-        _dialog("最近消息", "\n".join(lines) if lines else "暂无记录")
+        lines = []
+        for row in rows:
+            lines.append(f"{row['chat_id']} · {row['state']}\n收到：{row['content'][:80]}")
+            if row["reply"]:
+                lines.append(f"拟回复：{row['reply'][:160]}")
+            if row["detail"]:
+                lines.append(f"说明：{row['detail'][:120]}")
+            lines.append("")
+        _dialog("最近消息", "\n".join(lines).strip() if lines else "暂无记录")
 
     def exit_app(icon, item):
         engine.stop()
