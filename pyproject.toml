@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wxreply"
+version = "0.1.0"
+description = "Windows WeChat reply assistant with guarded unattended sending"
+requires-python = ">=3.12"
+dependencies = [
+  "wechatauto-replica @ git+https://github.com/fanyuantaier/wechatauto-replica.git@c350cd66a1e23711e2089c03473aaaf8b42cff41",
+  "httpx>=0.28,<1",
+  "pystray>=0.19.5,<1",
+]
+
+[project.scripts]
+wxreply = "wxreply.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["wxreply*"]
+
+[tool.setuptools.package-data]
+wxreply = ["default_config.json"]

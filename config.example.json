@@ -1,0 +1,17 @@
+{
+  "expected_wechat_version": "4.1.13.65",
+  "poll_interval_seconds": 2,
+  "auto_send": false,
+  "api_base_url": "https://api.openai.com/v1",
+  "model": "",
+  "system_prompt": "你正在帮我拟写微信回复。根据近期对话，用自然、简短、准确的中文回复。不要编造事实或承诺。只输出要发送的回复正文。",
+  "chats": [
+    {
+      "username": "在此填写联系人的微信内部ID",
+      "display_name": "在此填写微信中的唯一备注名",
+      "chat_type": "private",
+      "enabled": false,
+      "keywords": ["测试自动回复"]
+    }
+  ]
+}
