@@ -12,6 +12,7 @@ from tkinter import messagebox, ttk
 import pystray
 from wechatauto.param import WxParam
 
+from .ai import ConnectionTestResult, test_connection
 from .config import load_config, save_config
 from .engine import Engine
 from .models import AppConfig, ChatConfig
@@ -137,6 +138,7 @@ class ReplyApp(tk.Tk):
         self.engine: Engine | None = None
         self.worker: threading.Thread | None = None
         self.results: queue.Queue = queue.Queue()
+        self.api_results: queue.Queue = queue.Queue()
         self.closing = False
         self.tray: pystray.Icon | None = None
         self.title("微信自动回复")
@@ -245,6 +247,33 @@ class ReplyApp(tk.Tk):
         frame.rowconfigure(6, weight=1)
         ttk.Label(frame, text="API 密钥使用 Windows DPAPI 加密保存；配置改动须停止监听后保存，再重新启动。")\
             .grid(row=7, column=0, columnspan=2, padx=8, pady=8, sticky="w")
+        self.api_test_button = ttk.Button(frame, text="测试 API 连接", command=self.test_api)
+        self.api_test_button.grid(row=8, column=0, padx=8, pady=12, sticky="w")
+        self.api_test_status = tk.StringVar(value="使用当前输入的地址、模型和密钥；不发送微信聊天内容。")
+        ttk.Label(frame, textvariable=self.api_test_status, wraplength=600).grid(
+            row=8, column=1, padx=8, pady=12, sticky="w")
+
+    def test_api(self) -> None:
+        url = self.api_url.get().strip()
+        model = self.model.get().strip()
+        key = self.key.get().strip()
+        if not url or not model or not key:
+            self.api_test_status.set("请先填写 API 地址、模型名称和密钥。")
+            return
+        if not url.startswith(("https://", "http://")):
+            self.api_test_status.set("API 地址须以 https:// 或 http:// 开头。")
+            return
+        self.api_test_button.configure(state="disabled")
+        self.api_test_status.set("正在请求模型，请稍候…")
+
+        def worker() -> None:
+            try:
+                result = test_connection(url, model, key)
+            except Exception as exc:
+                result = ConnectionTestResult(False, f"连接测试异常：{type(exc).__name__}")
+            self.api_results.put(result)
+
+        threading.Thread(target=worker, daemon=True).start()
 
     def _load_fields(self) -> None:
         self.api_url.set(self.config.api_base_url)
@@ -392,6 +421,13 @@ class ReplyApp(tk.Tk):
         self.task_detail.configure(state="disabled")
 
     def _refresh(self) -> None:
+        while True:
+            try:
+                result = self.api_results.get_nowait()
+            except queue.Empty:
+                break
+            self.api_test_status.set(result.message)
+            self.api_test_button.configure(state="normal")
         while True:
             try:
                 dialog, contacts, error = self.results.get_nowait()

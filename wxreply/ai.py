@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import time
+from dataclasses import dataclass
 
 import httpx
 
@@ -9,6 +11,44 @@ from .models import AppConfig, Message
 
 class ReplyError(RuntimeError):
     pass
+
+
+@dataclass(frozen=True)
+class ConnectionTestResult:
+    ok: bool
+    message: str
+
+
+def test_connection(base_url: str, model: str, key: str) -> ConnectionTestResult:
+    """Exercise the same Chat Completions endpoint without sending chat history."""
+    url = f"{base_url.rstrip('/')}/chat/completions"
+    started = time.perf_counter()
+    try:
+        with httpx.Client(timeout=20) as client:
+            response = client.post(
+                url,
+                headers={"Authorization": f"Bearer {key}"},
+                json={"model": model, "messages": [
+                    {"role": "user", "content": "请只回复：连接成功"}
+                ]},
+            )
+        if response.status_code >= 400:
+            hint = {
+                401: "请检查 API 密钥",
+                403: "请检查密钥权限",
+                404: "请检查 API 地址和模型名称",
+                429: "请求受限或额度不足",
+            }.get(response.status_code, "请检查服务端配置")
+            return ConnectionTestResult(False, f"连接失败：HTTP {response.status_code}；{hint}")
+        content = response.json()["choices"][0]["message"]["content"]
+        if not isinstance(content, str) or not content.strip():
+            raise ValueError("empty completion")
+    except httpx.RequestError as exc:
+        return ConnectionTestResult(False, f"网络连接失败：{type(exc).__name__}")
+    except (ValueError, KeyError, IndexError, TypeError):
+        return ConnectionTestResult(False, "连接失败：响应不是有效的 Chat Completions 结果")
+    elapsed = time.perf_counter() - started
+    return ConnectionTestResult(True, f"连接成功，模型已返回文字（{elapsed:.1f} 秒）")
 
 
 class ReplyGenerator:
