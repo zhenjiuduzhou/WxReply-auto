@@ -16,6 +16,12 @@ dependencies = [
 [project.scripts]
 wxreply = "wxreply.cli:main"
 
+[project.gui-scripts]
+wxreply-gui = "wxreply.gui:main"
+
+[project.optional-dependencies]
+build = ["pyinstaller>=6.15,<7"]
+
 [tool.setuptools.packages.find]
 include = ["wxreply*"]
 

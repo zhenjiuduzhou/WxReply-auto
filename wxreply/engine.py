@@ -125,7 +125,10 @@ class Engine:
             if not self.store.set_state(row["event_id"], "ready", "sending"):
                 continue
             try:
-                GuardedSender(self.source, self.config.expected_wechat_version).send(
+                GuardedSender(
+                    self.source, self.config.expected_wechat_version,
+                    should_cancel=lambda: self._stop.is_set() or self.store.is_paused(),
+                ).send(
                     chat, incoming, reply
                 )
             except SendCancelled as exc:
@@ -146,7 +149,7 @@ class Engine:
         self.store.recover()
         if self.store.is_paused():
             self.store.set_paused(True)
-            self._set_status("已暂停，请从托盘恢复")
+            self._set_status("已暂停，请在窗口或托盘恢复")
         if not self._chats:
             self._set_status("待配置启用的私聊")
             self._stop.wait()

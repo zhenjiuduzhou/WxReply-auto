@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
+from dataclasses import asdict
 
 from .models import AppConfig, ChatConfig
 
@@ -36,3 +38,11 @@ def load_config(path: Path) -> AppConfig:
         system_prompt=str(raw.get("system_prompt", "你正在帮我拟写微信回复。只输出回复正文。")),
         chats=chats,
     )
+
+
+def save_config(path: Path, config: AppConfig) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(json.dumps(asdict(config), ensure_ascii=False, indent=2) + "\n",
+                         encoding="utf-8")
+    os.replace(temporary, path)

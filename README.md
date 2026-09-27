@@ -4,6 +4,20 @@
 
 当前适配目标是微信 **4.1.13.65**。项目使用固定提交的 [wechatauto-replica](https://github.com/fanyuantaier/wechatauto-replica) 读取数据库和激活 UI Automation。微信更新后，版本检查会阻止继续自动发送，需先重新验证。
 
+## 桌面版（推荐）
+
+双击 `dist\WxReply.exe` 打开主窗口。首次启动会在 `%LOCALAPPDATA%\wxreply\config.json` 创建配置；现有工作目录内的 `config.json` 会被复制到这里。桌面版不需要打开 PowerShell，也不需要单独安装 Python。Windows 用户 API 密钥使用 DPAPI 加密保存在 `%LOCALAPPDATA%\wxreply\api-key.dpapi`。
+
+1. 在“监听联系人”页添加测试联系人。可按备注搜索，选中结果后填入触发关键词。
+2. 在“模型与发送”页填写兼容 Chat Completions 的 API 地址、模型名称和密钥，保持“允许无人值守自动发送”未勾选，点击“保存配置”。
+3. 点击“启动监听”。首次启动会跳过旧消息，让测试联系人新发一条包含关键词的文字消息。
+4. 在“运行与任务”页查看状态，点选任务可以看到收到的消息、拟回复和处理说明。
+5. 确认只生成模式后，点击“停止”，勾选自动发送、保存、重新启动，再用测试联系人验证发送。
+
+关闭主窗口会缩到系统托盘；托盘菜单可以重新显示、暂停/恢复或退出。程序仅在微信版本吻合、已登录且桌面未锁定时工作。正式联系人仍应先用只生成模式验证规则。
+
+从源码启动图形界面：`.\.venv\Scripts\pythonw.exe -m wxreply.desktop`。重新构建 EXE：`powershell -ExecutionPolicy Bypass -File .\build.ps1`；产物是 `dist\WxReply.exe`。构建需在 Windows 上进行；打包方式参见 [PyInstaller 官方文档](https://pyinstaller.org/en/stable/operating-mode.html)。
+
 ## 安装
 
 在 Windows PowerShell、Python 3.12 环境下：

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 
 from wechatauto.uia_driver import WeChatUIA
 
@@ -19,9 +20,11 @@ class SendCancelled(RuntimeError):
 class GuardedSender:
     """One keyboard send only. Any ambiguous outcome stays unknown for review."""
 
-    def __init__(self, source: DatabaseMessageSource, expected_version: str):
+    def __init__(self, source: DatabaseMessageSource, expected_version: str,
+                 should_cancel: Callable[[], bool] | None = None):
         self.source = source
         self.expected_version = expected_version
+        self.should_cancel = should_cancel or (lambda: False)
 
     def send(self, chat: ChatConfig, incoming: Message, reply: str) -> None:
         assert_environment(self.expected_version)
@@ -45,6 +48,8 @@ class GuardedSender:
         latest = self.source.latest(chat.username)
         if latest is None or latest.event_id != incoming.event_id:
             raise SendCancelled("发送前出现新消息，取消本次回复")
+        if self.should_cancel():
+            raise SendCancelled("自动回复已暂停或停止，取消发送")
         try:
             edit.SendKeys("{Enter}", waitTime=0.05)
         except Exception as exc:

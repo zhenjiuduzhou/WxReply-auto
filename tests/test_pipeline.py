@@ -110,6 +110,20 @@ class SenderTests(unittest.TestCase):
         GuardedSender(source, "4.1.13.65").send(CHAT, msg(10, 1, "触发"), "回复")
         ui._chat_input.return_value.SendKeys.assert_called_once()
 
+    @patch("wxreply.sender.assert_environment")
+    @patch("wxreply.sender.WeChatUIA")
+    def test_pause_before_enter_cancels_send(self, ui_class, environment):
+        source = _FakeSource(msg(10, 1, "触发"))
+        ui = ui_class.return_value
+        ui.ensure_window.return_value = True
+        ui.open_chat.return_value = True
+        ui.current_chat.return_value = CHAT.display_name
+        ui._chat_input.return_value.GetValuePattern.return_value.Value = "回复"
+        with self.assertRaises(SendCancelled):
+            GuardedSender(source, "4.1.13.65", should_cancel=lambda: True).send(
+                CHAT, msg(10, 1, "触发"), "回复")
+        ui._chat_input.return_value.SendKeys.assert_not_called()
+
 
 class EngineTests(unittest.TestCase):
     def test_first_poll_ignores_existing_messages_then_queues_new(self):
