@@ -14,16 +14,13 @@ from wechatauto.param import WxParam
 
 from .ai import ConnectionTestResult, test_connection
 from .config import load_config, save_config
+from .data_directory import app_directory
 from .engine import Engine
 from .models import AppConfig, ChatConfig
 from .secrets import ApiKeyStore
 from .source import DatabaseMessageSource
 from .store import Store
 from .tray import _icon_image
-
-
-def app_directory() -> Path:
-    return Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "wxreply"
 
 
 def initial_config(path: Path) -> AppConfig:
@@ -221,28 +218,36 @@ class ReplyApp(tk.Tk):
         self.key = tk.StringVar()
         self.version = tk.StringVar()
         self.interval = tk.StringVar()
+        self.parallel = tk.StringVar()
+        self.retention = tk.StringVar()
         self.auto_send = tk.BooleanVar()
         fields = (("API 地址", self.api_url), ("模型名称", self.model),
                   ("API 密钥（仅保存在本机）", self.key), ("微信版本", self.version),
                   ("轮询间隔（秒）", self.interval))
         for row, (label, variable) in enumerate(fields):
-            ttk.Label(frame, text=label).grid(row=row, column=0, padx=8, pady=12, sticky="w")
+            ttk.Label(frame, text=label).grid(row=row, column=0, padx=8, pady=7, sticky="w")
             entry = ttk.Entry(frame, textvariable=variable, show="•" if variable is self.key else "")
-            entry.grid(row=row, column=1, padx=8, pady=12, sticky="ew")
+            entry.grid(row=row, column=1, padx=8, pady=7, sticky="ew")
+        options = ttk.Frame(frame)
+        options.grid(row=5, column=0, columnspan=2, padx=8, pady=7, sticky="w")
+        ttk.Label(options, text="并行模型请求（1–8）").pack(side="left")
+        ttk.Entry(options, textvariable=self.parallel, width=7).pack(side="left", padx=(8, 30))
+        ttk.Label(options, text="任务记录保留天数（7–3650）").pack(side="left")
+        ttk.Entry(options, textvariable=self.retention, width=8).pack(side="left", padx=8)
         ttk.Checkbutton(frame, text="允许无人值守自动发送（先用只生成模式验证）",
-                        variable=self.auto_send).grid(row=5, column=0, columnspan=2,
-                                                     padx=8, pady=12, sticky="w")
-        ttk.Label(frame, text="系统提示词").grid(row=6, column=0, padx=8, pady=12, sticky="nw")
+                        variable=self.auto_send).grid(row=6, column=0, columnspan=2,
+                                                     padx=8, pady=7, sticky="w")
+        ttk.Label(frame, text="系统提示词").grid(row=7, column=0, padx=8, pady=7, sticky="nw")
         self.prompt = tk.Text(frame, height=7, wrap="word", font=("Microsoft YaHei UI", 10))
-        self.prompt.grid(row=6, column=1, padx=8, pady=12, sticky="nsew")
-        frame.rowconfigure(6, weight=1)
+        self.prompt.grid(row=7, column=1, padx=8, pady=7, sticky="nsew")
+        frame.rowconfigure(7, weight=1)
         ttk.Label(frame, text="API 密钥使用 Windows DPAPI 加密保存；配置改动须停止监听后保存，再重新启动。")\
-            .grid(row=7, column=0, columnspan=2, padx=8, pady=8, sticky="w")
+            .grid(row=8, column=0, columnspan=2, padx=8, pady=7, sticky="w")
         self.api_test_button = ttk.Button(frame, text="测试 API 连接", command=self.test_api)
-        self.api_test_button.grid(row=8, column=0, padx=8, pady=12, sticky="w")
+        self.api_test_button.grid(row=9, column=0, padx=8, pady=7, sticky="w")
         self.api_test_status = tk.StringVar(value="使用当前输入的地址、模型和密钥；不发送微信聊天内容。")
         ttk.Label(frame, textvariable=self.api_test_status, wraplength=600).grid(
-            row=8, column=1, padx=8, pady=12, sticky="w")
+            row=9, column=1, padx=8, pady=7, sticky="w")
 
     def test_api(self) -> None:
         url = self.api_url.get().strip()
@@ -271,6 +276,8 @@ class ReplyApp(tk.Tk):
         self.model.set(self.config.model)
         self.version.set(self.config.expected_wechat_version)
         self.interval.set(str(self.config.poll_interval_seconds))
+        self.parallel.set(str(self.config.max_parallel_api_requests))
+        self.retention.set(str(self.config.history_retention_days))
         self.auto_send.set(self.config.auto_send)
         self.prompt.insert("1.0", self.config.system_prompt)
         try:
@@ -338,6 +345,12 @@ class ReplyApp(tk.Tk):
             interval = float(self.interval.get())
             if interval < 0.5:
                 raise ValueError("轮询间隔不得小于 0.5 秒")
+            parallel = int(self.parallel.get())
+            retention = int(self.retention.get())
+            if not 1 <= parallel <= 8:
+                raise ValueError("并行模型请求必须在 1 到 8 之间")
+            if not 7 <= retention <= 3650:
+                raise ValueError("任务记录保留天数必须在 7 到 3650 之间")
             candidate = replace(self.config,
                 expected_wechat_version=self.version.get().strip(),
                 poll_interval_seconds=interval,
@@ -345,7 +358,9 @@ class ReplyApp(tk.Tk):
                 api_base_url=self.api_url.get().strip().rstrip("/"),
                 model=self.model.get().strip(),
                 system_prompt=self.prompt.get("1.0", "end").strip(),
-                chats=tuple(self.chats))
+                chats=tuple(self.chats),
+                max_parallel_api_requests=parallel,
+                history_retention_days=retention)
             if not candidate.expected_wechat_version or not candidate.api_base_url:
                 raise ValueError("请填写微信版本和 API 地址")
             if any(chat.enabled and chat.chat_type != "private" for chat in candidate.chats):

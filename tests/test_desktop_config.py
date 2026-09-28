@@ -16,7 +16,8 @@ class DesktopConfigTests(unittest.TestCase):
             path = Path(directory) / "config.json"
             config = AppConfig("4.1.13.65", 2.0, False, "https://example.com/v1",
                                "example-model", "测试提示词",
-                               (ChatConfig("wxid_test", "测试备注", "private", True),))
+                               (ChatConfig("wxid_test", "测试备注", "private", True),),
+                               max_parallel_api_requests=4, history_retention_days=180)
             save_config(path, config)
             self.assertEqual(load_config(path), config)
 

@@ -56,7 +56,7 @@ def desktop_is_unlocked() -> bool:
 class DatabaseMessageSource:
     """Read-only view of synced WeChat messages; the upstream cache lives in data_dir."""
 
-    PAGE_SIZE = 200
+    PAGE_SIZE = 100
     MAX_PAGES = 20
 
     def __init__(self, data_dir: Path):
@@ -83,7 +83,7 @@ class DatabaseMessageSource:
         return self._parse(chat_id, rows[0]) if rows else None
 
     def recent(self, chat_id: str, limit: int = 20) -> list[Message]:
-        rows = self.db.get_messages(chat_id, limit=limit)
+        rows = self.db.get_messages(chat_id, limit=min(max(limit, 1), self.PAGE_SIZE))
         return [self._parse(chat_id, row) for row in reversed(rows)]
 
     def read_since(self, chat_id: str, checkpoint: int) -> list[Message]:

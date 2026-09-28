@@ -41,3 +41,5 @@ class AppConfig:
     model: str
     system_prompt: str
     chats: tuple[ChatConfig, ...]
+    max_parallel_api_requests: int = 3
+    history_retention_days: int = 180

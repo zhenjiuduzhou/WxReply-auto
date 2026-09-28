@@ -34,6 +34,7 @@ class Store:
                     updated_at INTEGER NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS events_pending ON events(state, chat_id, sort_seq);
+                CREATE INDEX IF NOT EXISTS events_cleanup ON events(updated_at);
                 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
             """)
 
@@ -136,3 +137,21 @@ class Store:
                 "SELECT chat_id, state, content, reply, detail, updated_at FROM events ORDER BY updated_at DESC LIMIT ?",
                 (limit,),
             ).fetchall()
+
+    def prune(self, retention_days: int, now: int | None = None) -> int:
+        """Discard old terminal events; keep checkpoints and unresolved tasks."""
+        if not 7 <= retention_days <= 3650:
+            raise ValueError("history_retention_days 必须在 7 到 3650 之间")
+        cutoff = (int(time.time()) if now is None else now) - retention_days * 86400
+        with self._connect() as db:
+            deleted = db.execute(
+                "DELETE FROM events WHERE updated_at < ? "
+                "AND state IN ('ignored','failed','drafted','confirmed','superseded') "
+                "AND EXISTS (SELECT 1 FROM checkpoints AS c "
+                "WHERE c.chat_id=events.chat_id AND events.sort_seq < c.sort_seq)",
+                (cutoff,),
+            ).rowcount
+        if deleted >= 1000:
+            with self._connect() as db:
+                db.execute("VACUUM")
+        return deleted

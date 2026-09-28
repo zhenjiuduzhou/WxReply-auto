@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import logging
-import os
 import sys
 import uuid
 from pathlib import Path
@@ -10,16 +9,12 @@ from pathlib import Path
 from wechatauto.param import WxParam
 
 from .config import load_config
+from .data_directory import app_directory
 from .engine import Engine
 from .models import ChatConfig
 from .sender import GuardedSender
 from .source import DatabaseMessageSource, assert_environment
 from .tray import run_tray
-
-
-def _data_dir() -> Path:
-    base = os.environ.get("LOCALAPPDATA") or str(Path.home())
-    return Path(base) / "wxreply"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -29,7 +24,7 @@ def main(argv: list[str] | None = None) -> int:
         "run", "probe-db", "probe-send", "list-chats", "find-contact", "init"
     ])
     parser.add_argument("--config", type=Path, default=Path("config.json"))
-    parser.add_argument("--data-dir", type=Path, default=_data_dir())
+    parser.add_argument("--data-dir", type=Path, default=app_directory())
     parser.add_argument("--name", help="find-contact 使用的昵称或备注关键字")
     args = parser.parse_args(argv)
 

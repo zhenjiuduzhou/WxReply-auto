@@ -1,6 +1,8 @@
 {
   "expected_wechat_version": "4.1.13.65",
   "poll_interval_seconds": 2,
+  "max_parallel_api_requests": 3,
+  "history_retention_days": 180,
   "auto_send": false,
   "api_base_url": "https://api.openai.com/v1",
   "model": "",

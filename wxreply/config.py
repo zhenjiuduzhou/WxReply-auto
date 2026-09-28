@@ -28,6 +28,12 @@ def load_config(path: Path) -> AppConfig:
     interval = float(raw.get("poll_interval_seconds", 2))
     if interval < 0.5:
         raise ValueError("poll_interval_seconds 不能小于 0.5")
+    parallel = int(raw.get("max_parallel_api_requests", 3))
+    if not 1 <= parallel <= 8:
+        raise ValueError("max_parallel_api_requests 必须在 1 到 8 之间")
+    retention = int(raw.get("history_retention_days", 180))
+    if not 7 <= retention <= 3650:
+        raise ValueError("history_retention_days 必须在 7 到 3650 之间")
     return AppConfig(
         expected_wechat_version=str(raw["expected_wechat_version"]),
         poll_interval_seconds=interval,
@@ -36,6 +42,8 @@ def load_config(path: Path) -> AppConfig:
         model=str(raw.get("model", "")).strip(),
         system_prompt=str(raw.get("system_prompt", "你正在帮我拟写微信回复。只输出回复正文。")),
         chats=chats,
+        max_parallel_api_requests=parallel,
+        history_retention_days=retention,
     )
 
 

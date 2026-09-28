@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import os
 import traceback
-from pathlib import Path
 
+from wxreply.data_directory import app_directory, project_directory
 from wxreply.gui import main
 
 
@@ -11,7 +10,10 @@ if __name__ == "__main__":
     try:
         main()
     except Exception:
-        directory = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "wxreply"
+        try:
+            directory = app_directory()
+        except Exception:
+            directory = project_directory() / "data"
         directory.mkdir(parents=True, exist_ok=True)
         details = traceback.format_exc()
         (directory / "startup-error.log").write_text(details, encoding="utf-8")
