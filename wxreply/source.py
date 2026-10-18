@@ -5,9 +5,9 @@ from pathlib import Path
 
 import psutil
 import win32api
-from wechatauto.db import WeChatDB
 
 from .models import ChatConfig, Message
+from .wechat_db import AccountAwareWeChatDB
 
 
 class SourceError(RuntimeError):
@@ -62,15 +62,16 @@ class DatabaseMessageSource:
     def __init__(self, data_dir: Path):
         workdir = data_dir / "upstream"
         workdir.mkdir(parents=True, exist_ok=True)
-        self.db = WeChatDB(workdir=str(workdir))
+        self.db = AccountAwareWeChatDB(workdir=str(workdir))
 
     @staticmethod
     def _parse(chat_id: str, raw: dict) -> Message:
-        sender = raw.get("sender_username") or ("self" if raw.get("sender_id") == 2 else chat_id)
+        is_self = raw.get("is_self") is True
+        sender = "self" if is_self else raw.get("sender_username") or chat_id
         return Message(
             chat_id=chat_id,
             sender_id=str(sender),
-            is_self=raw.get("sender_id") == 2,
+            is_self=is_self,
             kind=str(raw.get("type") or ""),
             content=str(raw.get("content") or ""),
             sort_seq=int(raw["sort_seq"]),

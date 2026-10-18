@@ -149,7 +149,7 @@ class SenderTests(unittest.TestCase):
         source = _FakeSource(msg(10, 1, "触发"))
         source.db = unittest.mock.Mock()
         source.db.get_messages.return_value = [
-            {"sort_seq": 11, "sender_id": 2, "content": "回复"}
+            {"sort_seq": 11, "sender_id": 2, "is_self": True, "content": "回复"}
         ]
         ui = ui_class.return_value
         ui.ensure_window.return_value = True

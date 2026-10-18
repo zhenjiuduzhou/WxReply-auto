@@ -58,7 +58,7 @@ class GuardedSender:
             rows = self.source.db.get_messages(chat.username, limit=20)
             if any(
                 int(row["sort_seq"]) > incoming.sort_seq
-                and row.get("sender_id") == 2
+                and row.get("is_self") is True
                 and row.get("content") == reply
                 for row in rows
             ):
